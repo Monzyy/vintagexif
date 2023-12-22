@@ -1,8 +1,10 @@
+import shutil
 from datetime import datetime
 from pathlib import Path
 
 import pytest
 
+import vintagexif
 from vintagexif import get_image_date_mapping
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
@@ -47,7 +49,7 @@ def year_month_day_dir() -> Path:
     return FIXTURE_DIR / "year_month_day_dir"
 
 
-def test_assert_should_get_image_date_map_for_year_month_day_dir(year_month_day_dir):
+def test_should_get_image_date_map_for_year_month_day_dir(year_month_day_dir):
     assert get_image_date_mapping(year_month_day_dir) == {
         year_month_day_dir
         / "1993"
@@ -55,3 +57,18 @@ def test_assert_should_get_image_date_map_for_year_month_day_dir(year_month_day_
         / "21"
         / "vintage.jpg": datetime(year=1993, month=3, day=21)
     }
+
+
+@pytest.fixture()
+def destination_dir() -> Path:
+    dest_dir = FIXTURE_DIR / "destination"
+    yield dest_dir
+    shutil.rmtree(dest_dir, ignore_errors=True)
+
+
+def test_should_copy_image_to_destination(year_month_day_dir, destination_dir):
+    vintagexif.vintagexif(
+        source_dir=year_month_day_dir, destination_dir=destination_dir
+    )
+
+    assert (destination_dir / "vintage.jpg").is_file()

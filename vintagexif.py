@@ -1,4 +1,5 @@
 import os
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Mapping, Optional
@@ -41,3 +42,22 @@ def try_parse_date(date: str) -> Optional[int]:
     except ValueError:
         return None
     return value
+
+
+def vintagexif(source_dir: Path, destination_dir: Path):
+    if not source_dir.is_dir():
+        raise ValueError("source_dir is not a directory")
+    if not destination_dir.exists():
+        destination_dir.mkdir(exist_ok=True)
+    if not destination_dir.is_dir():
+        raise ValueError("destination_dir is not a directory")
+
+    image_date_mapping = get_image_date_mapping(source_dir)
+
+    for file, date in image_date_mapping.items():
+        shutil.copy2(file, destination_dir)
+
+
+if __name__ == "__main__":
+    m = get_image_date_mapping(Path("/mnt/d/NextCloud/Familie-mappen/Scans"))
+    ...
