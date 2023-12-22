@@ -1,11 +1,33 @@
+import datetime
 import os
 import shutil
-from datetime import datetime
 from pathlib import Path
-from typing import Mapping, Optional
+from typing import Mapping, Optional, List
+
+import exif
 
 
-def get_image_date_mapping(source_dir: Path) -> Mapping[Path, datetime]:
+class Image:
+    def __init__(self, file_path: Path):
+        if not file_path.is_file():
+            raise ValueError("File does not exist")
+
+        self._image = exif.Image(file_path.open("rb"))
+
+    def get_original_date(self) -> Optional[datetime.datetime]:
+        datetime_original = self._image.get("datetime_original")
+        if datetime_original is None:
+            return None
+
+        return datetime.datetime.strptime(datetime_original, "%Y:%m:%d %H:%M:%S")
+
+    def set_original_date(self, date: datetime.date):
+        self._image.datetime_original = datetime.datetime.strftime(
+            date, "%Y:%m:%d %H:%M:%S"
+        )
+
+
+def get_image_date_mapping(source_dir: Path) -> Mapping[Path, datetime.datetime]:
     map = {}
 
     for root, dirs, files in os.walk(source_dir):
@@ -31,7 +53,7 @@ def get_image_date_mapping(source_dir: Path) -> Mapping[Path, datetime]:
             year = root_value
 
         for file in files:
-            map[root / file] = datetime(year=year, month=month, day=day)
+            map[root / file] = datetime.datetime(year=year, month=month, day=day)
 
     return map
 
@@ -44,7 +66,7 @@ def try_parse_date(date: str) -> Optional[int]:
     return value
 
 
-def vintagexif(source_dir: Path, destination_dir: Path):
+def vintagexif(source_dir: Path, destination_dir: Path) -> List[Path]:
     if not source_dir.is_dir():
         raise ValueError("source_dir is not a directory")
     if not destination_dir.exists():
@@ -54,8 +76,25 @@ def vintagexif(source_dir: Path, destination_dir: Path):
 
     image_date_mapping = get_image_date_mapping(source_dir)
 
+    last_date = None
+    counter = 1
+
+    destination_files = []
     for file, date in image_date_mapping.items():
-        shutil.copy2(file, destination_dir)
+        if last_date != date:
+            counter = 1
+        else:
+            counter += 1
+        destination_file = (
+            destination_dir / f"{date.strftime('%Y-%m-%d')}_{counter:03}{file.suffix}"
+        )
+        shutil.copy2(file, destination_file)
+        dest_image = Image(destination_file)
+
+        last_date = date
+        destination_files.append(destination_file)
+
+    return destination_files
 
 
 if __name__ == "__main__":
