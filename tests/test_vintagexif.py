@@ -40,3 +40,18 @@ def test_should_get_image_date_map_for_year_month_dir(year_month_dir):
         / "02"
         / "vintage.jpg": datetime(year=1994, month=2, day=1)
     }
+
+
+@pytest.fixture()
+def year_month_day_dir() -> Path:
+    return FIXTURE_DIR / "year_month_day_dir"
+
+
+def test_assert_should_get_image_date_map_for_year_month_day_dir(year_month_day_dir):
+    assert get_image_date_mapping(year_month_day_dir) == {
+        year_month_day_dir
+        / "1993"
+        / "03"
+        / "21"
+        / "vintage.jpg": datetime(year=1993, month=3, day=21)
+    }

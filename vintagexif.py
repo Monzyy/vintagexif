@@ -18,7 +18,12 @@ def get_image_date_mapping(source_dir: Path) -> Mapping[Path, datetime]:
             continue
 
         parent_value = try_parse_date(root.parent.name)
-        if parent_value is not None:
+        grand_parent_value = try_parse_date(root.parent.parent.name)
+        if grand_parent_value is not None and parent_value is not None:
+            year = grand_parent_value
+            month = parent_value
+            day = root_value
+        elif parent_value is not None:
             year = parent_value
             month = root_value
         else:
