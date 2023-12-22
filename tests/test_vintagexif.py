@@ -96,10 +96,11 @@ def test_vintagexif_should_append_unique_number_to_images_from_same_date(
     }
 
 
-# def test_vintagexif_should_set_image_original_date(year_month_day_dir, destination_dir):
-#    destination_files = vintagexif.vintagexif(
-#        source_dir=year_month_day_dir, destination_dir=destination_dir
-#    )
-#    image = vintagexif.Image(file_path=destination_files[0])
-#
-#    assert image.get_original_date() == datetime.datetime(year=1993, month=3, day=21)
+def test_vintagexif_should_set_image_original_date(year_month_day_dir, destination_dir):
+    destination_files = vintagexif.vintagexif(
+        source_dir=year_month_day_dir, destination_dir=destination_dir
+    )
+
+    assert vintagexif.get_image_original_date(
+        destination_files[0]
+    ) == datetime.datetime(year=1993, month=3, day=21)

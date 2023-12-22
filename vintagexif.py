@@ -5,26 +5,44 @@ from pathlib import Path
 from typing import Mapping, Optional, List
 
 import exif
+import piexif
 
 
-class Image:
-    def __init__(self, file_path: Path):
-        if not file_path.is_file():
-            raise ValueError("File does not exist")
+# def get_image_original_date(image_path: Path) -> Optional[datetime.datetime]:
+#    with image_path.open("rb") as image_file:
+#        image = exif.Image(image_file)
+#    datetime_original = image.get("datetime_original")
+#    if datetime_original is None:
+#        return None
+#    return datetime.datetime.strptime(datetime_original, "%Y:%m:%d %H:%M:%S")
 
-        self._image = exif.Image(file_path.open("rb"))
 
-    def get_original_date(self) -> Optional[datetime.datetime]:
-        datetime_original = self._image.get("datetime_original")
-        if datetime_original is None:
-            return None
+def get_image_original_date(image_path: Path) -> Optional[datetime.datetime]:
+    exif_dict = piexif.load(str(image_path))
+    date_string = exif_dict.get("Exif", {}).get(piexif.ExifIFD.DateTimeOriginal)
+    if date_string is None:
+        return None
+    return datetime.datetime.strptime(date_string.decode("utf8"), "%Y:%m:%d %H:%M:%S")
 
-        return datetime.datetime.strptime(datetime_original, "%Y:%m:%d %H:%M:%S")
 
-    def set_original_date(self, date: datetime.date):
-        self._image.datetime_original = datetime.datetime.strftime(
-            date, "%Y:%m:%d %H:%M:%S"
-        )
+# def set_image_original_date(image_path: Path, date: datetime.datetime):
+#    with image_path.open("rb") as image_file:
+#        image = exif.Image(image_file)
+#
+#    image.datetime_original = datetime.datetime.strftime(date, exif.DATETIME_STR_FORMAT)
+#
+#    with image_path.open("wb") as image_file:
+#        image_file.write(image.get_file())
+
+
+def set_image_original_date(image_path: Path, date: datetime.datetime):
+    exif_dict = piexif.load(str(image_path))
+
+    exif_dict["Exif"][piexif.ExifIFD.DateTimeOriginal] = datetime.datetime.strftime(
+        date, "%Y:%m:%d %H:%M:%S"
+    )
+    exif_bytes = piexif.dump(exif_dict)
+    piexif.insert(exif_bytes, str(image_path))
 
 
 def get_image_date_mapping(source_dir: Path) -> Mapping[Path, datetime.datetime]:
@@ -80,7 +98,8 @@ def vintagexif(source_dir: Path, destination_dir: Path) -> List[Path]:
     counter = 1
 
     destination_files = []
-    for file, date in image_date_mapping.items():
+
+    for file, date in sorted(image_date_mapping.items(), key=lambda p: p[1]):
         if last_date != date:
             counter = 1
         else:
@@ -89,7 +108,7 @@ def vintagexif(source_dir: Path, destination_dir: Path) -> List[Path]:
             destination_dir / f"{date.strftime('%Y-%m-%d')}_{counter:03}{file.suffix}"
         )
         shutil.copy2(file, destination_file)
-        dest_image = Image(destination_file)
+        set_image_original_date(destination_file, date)
 
         last_date = date
         destination_files.append(destination_file)
@@ -98,5 +117,10 @@ def vintagexif(source_dir: Path, destination_dir: Path) -> List[Path]:
 
 
 if __name__ == "__main__":
-    m = get_image_date_mapping(Path("/mnt/d/NextCloud/Familie-mappen/Scans"))
-    ...
+
+    def _m():
+        vintagexif(
+            Path("/mnt/d/NextCloud/Familie-mappen/Scans"), Path("/mnt/d/vintagexif")
+        )
+
+    _m()
