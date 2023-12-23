@@ -4,17 +4,7 @@ import shutil
 from pathlib import Path
 from typing import Mapping, Optional, List
 
-import exif
 import piexif
-
-
-# def get_image_original_date(image_path: Path) -> Optional[datetime.datetime]:
-#    with image_path.open("rb") as image_file:
-#        image = exif.Image(image_file)
-#    datetime_original = image.get("datetime_original")
-#    if datetime_original is None:
-#        return None
-#    return datetime.datetime.strptime(datetime_original, "%Y:%m:%d %H:%M:%S")
 
 
 def get_image_original_date(image_path: Path) -> Optional[datetime.datetime]:
@@ -23,16 +13,6 @@ def get_image_original_date(image_path: Path) -> Optional[datetime.datetime]:
     if date_string is None:
         return None
     return datetime.datetime.strptime(date_string.decode("utf8"), "%Y:%m:%d %H:%M:%S")
-
-
-# def set_image_original_date(image_path: Path, date: datetime.datetime):
-#    with image_path.open("rb") as image_file:
-#        image = exif.Image(image_file)
-#
-#    image.datetime_original = datetime.datetime.strftime(date, exif.DATETIME_STR_FORMAT)
-#
-#    with image_path.open("wb") as image_file:
-#        image_file.write(image.get_file())
 
 
 def set_image_original_date(image_path: Path, date: datetime.datetime):

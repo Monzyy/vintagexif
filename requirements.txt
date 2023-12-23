@@ -1,4 +1,3 @@
-exif
 pytest
 pre-commit
 piexif
