@@ -88,7 +88,11 @@ def vintagexif(source_dir: Path, destination_dir: Path) -> List[Path]:
             destination_dir / f"{date.strftime('%Y-%m-%d')}_{counter:03}{file.suffix}"
         )
         shutil.copy2(file, destination_file)
-        set_image_original_date(destination_file, date)
+
+        set_image_original_date(
+            image_path=destination_file,
+            date=date + datetime.timedelta(seconds=counter - 1),
+        )
 
         last_date = date
         destination_files.append(destination_file)
