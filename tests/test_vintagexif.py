@@ -2,7 +2,6 @@ import datetime
 import shutil
 from pathlib import Path
 
-import exif
 import pytest
 
 import vintagexif
