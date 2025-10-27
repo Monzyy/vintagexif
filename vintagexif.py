@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Mapping, Optional, List
 
 import piexif
+from dateutil.parser import parse
 
 
 def get_image_original_date(image_path: Path) -> Optional[datetime.datetime]:
@@ -34,12 +35,17 @@ def get_image_date_mapping(source_dir: Path) -> Mapping[Path, datetime.datetime]
         if not len(files):
             continue
 
-        root_value = try_parse_date(root.name)
+        for file in files:
+            dt = try_parse_date(Path(file).stem)
+            if dt is not None:
+                map[root / file] = dt
+
+        root_value = try_parse_int(root.name)
         if root_value is None:
             continue
 
-        parent_value = try_parse_date(root.parent.name)
-        grand_parent_value = try_parse_date(root.parent.parent.name)
+        parent_value = try_parse_int(root.parent.name)
+        grand_parent_value = try_parse_int(root.parent.parent.name)
         if grand_parent_value is not None and parent_value is not None:
             year = grand_parent_value
             month = parent_value
@@ -56,12 +62,19 @@ def get_image_date_mapping(source_dir: Path) -> Mapping[Path, datetime.datetime]
     return map
 
 
-def try_parse_date(date: str) -> Optional[int]:
+def try_parse_int(date: str) -> Optional[int]:
     try:
         value = int(date)
     except ValueError:
         return None
     return value
+
+
+def try_parse_date(date: str) -> Optional[datetime.datetime]:
+    try:
+        return parse(date)
+    except ValueError:
+        return None
 
 
 def vintagexif(source_dir: Path, destination_dir: Path) -> List[Path]:
@@ -104,7 +117,8 @@ if __name__ == "__main__":
 
     def _m():
         vintagexif(
-            Path("/mnt/d/NextCloud/Familie-mappen/Scans"), Path("/mnt/d/vintagexif")
+            Path("D:\\Nextcloud\\Familie-mappen\\Hjemmevideoer\\Hjemmevideoer analog"),
+            Path("D:\\vintage_exif_video"),
         )
 
     _m()

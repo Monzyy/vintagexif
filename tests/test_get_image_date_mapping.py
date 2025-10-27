@@ -1,4 +1,5 @@
 import datetime
+from pathlib import Path
 
 from vintagexif import get_image_date_mapping
 
@@ -31,4 +32,11 @@ def test_should_get_image_date_map_for_year_month_day_dir(year_month_day_dir):
         / "03"
         / "21"
         / "vintage.jpg": datetime.datetime(year=1993, month=3, day=21)
+    }
+
+
+def test_should_get_image_date_map_for_flat_structured_dir(flat_structured_image_dir):
+    assert get_image_date_mapping(flat_structured_image_dir) == {
+        flat_structured_image_dir
+        / "1996-08-27.jpg": datetime.datetime(year=1996, month=8, day=27)
     }

@@ -36,3 +36,8 @@ def destination_dir() -> Path:
 @pytest.fixture
 def two_images_same_date_dir() -> Path:
     return FIXTURE_DIR / "two_images"
+
+
+@pytest.fixture
+def flat_structured_image_dir() -> Path:
+    return FIXTURE_DIR / "flat_structure"
