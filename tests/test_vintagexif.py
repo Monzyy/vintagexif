@@ -30,6 +30,16 @@ def test_vintagexif_should_set_image_original_date(year_month_day_dir, destinati
         source_dir=year_month_day_dir, destination_dir=destination_dir
     )
 
-    assert vintagexif.get_image_original_date(
+    assert vintagexif.get_media_original_date(
         destination_files[0]
     ) == datetime.datetime(year=1993, month=3, day=21)
+
+
+def test_vintagexif_should_set_mp4_original_date(mp4_dir, destination_dir):
+    destination_files = vintagexif.vintagexif(
+        source_dir=mp4_dir, destination_dir=destination_dir
+    )
+
+    assert vintagexif.get_media_original_date(
+        destination_files[0]
+    ) == datetime.datetime(year=1997, month=9, day=28)

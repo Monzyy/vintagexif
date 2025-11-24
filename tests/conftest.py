@@ -41,3 +41,8 @@ def two_images_same_date_dir() -> Path:
 @pytest.fixture
 def flat_structured_image_dir() -> Path:
     return FIXTURE_DIR / "flat_structure"
+
+
+@pytest.fixture
+def mp4_dir() -> Path:
+    return FIXTURE_DIR / "mp4"

@@ -1,29 +1,103 @@
 import datetime
 import os
 import shutil
+from enum import Enum
 from pathlib import Path
-from typing import Mapping, Optional, List
+from typing import Mapping, Optional, List, Callable, Dict
 
+import exiftool
 import piexif
 from dateutil.parser import parse
 
 
-def get_image_original_date(image_path: Path) -> Optional[datetime.datetime]:
-    exif_dict = piexif.load(str(image_path))
+class MediaType(Enum):
+    Image = "IMAGE"
+    Video = "VIDEO"
+
+
+def _set_image_original_date(date: datetime.datetime, media_path: Path):
+    exif_dict = piexif.load(str(media_path))
+
+    exif_dict["Exif"][piexif.ExifIFD.DateTimeOriginal] = datetime.datetime.strftime(
+        date, "%Y:%m:%d %H:%M:%S"
+    )
+    exif_bytes = piexif.dump(exif_dict)
+    piexif.insert(exif_bytes, str(media_path))
+
+
+def _set_video_original_date(date: datetime.datetime, video_path: Path):
+    with exiftool.ExifToolHelper() as et:
+        et.set_tags(
+            files=str(video_path),
+            tags={
+                "File:FileModifyDate": date,
+                "File:FileAccessDate": date,
+                "File:FileCreateDate": date,
+                "QuickTime:CreateDate": date,
+                "QuickTime:ModifyDate": date,
+                "QuickTime:TrackCreateDate": date,
+                "QuickTime:TrackModifyDate": date,
+                "QuickTime:MediaCreateDate": date,
+                "QuickTime:MediaModifyDate": date,
+            },
+            params=["-P", "-overwrite_original"],
+        )
+
+
+MEDIA_TYPE_TO_ORIGINAL_DATE_SETTER: Dict[
+    MediaType, Callable[[datetime.datetime, Path], None]
+] = {
+    MediaType.Image: _set_image_original_date,
+    MediaType.Video: _set_video_original_date,
+}
+
+
+def _get_image_original_date(media_path: Path) -> Optional[datetime.datetime]:
+    exif_dict = piexif.load(str(media_path))
     date_string = exif_dict.get("Exif", {}).get(piexif.ExifIFD.DateTimeOriginal)
     if date_string is None:
         return None
     return datetime.datetime.strptime(date_string.decode("utf8"), "%Y:%m:%d %H:%M:%S")
 
 
-def set_image_original_date(image_path: Path, date: datetime.datetime):
-    exif_dict = piexif.load(str(image_path))
+def _get_video_original_date(media_path: Path) -> datetime.datetime:
+    with exiftool.ExifToolHelper() as et:
+        tag_name = "File:FileCreateDate"
+        date_string = et.get_tags(media_path, tag_name)[0][tag_name]
 
-    exif_dict["Exif"][piexif.ExifIFD.DateTimeOriginal] = datetime.datetime.strftime(
-        date, "%Y:%m:%d %H:%M:%S"
+    # Removes tzinfo because this method is only used for tests, where timezone really doesn't matter,
+    # and we don't want to make our tests more verbose to accommodate tzinfo
+    return datetime.datetime.strptime(date_string, "%Y:%m:%d %H:%M:%S%z").replace(
+        tzinfo=None
     )
-    exif_bytes = piexif.dump(exif_dict)
-    piexif.insert(exif_bytes, str(image_path))
+
+
+MEDIA_TYPE_TO_ORIGINAL_DATE_GETTER: Dict[
+    MediaType, Callable[[Path], datetime.datetime]
+] = {
+    MediaType.Image: _get_image_original_date,
+    MediaType.Video: _get_video_original_date,
+}
+
+
+def get_media_original_date(media_path: Path) -> Optional[datetime.datetime]:
+    media_type = _get_image_type(Path(media_path))
+
+    return MEDIA_TYPE_TO_ORIGINAL_DATE_GETTER[media_type](media_path)
+
+
+def _get_image_type(media_path: Path) -> MediaType:
+    try:
+        piexif.load(str(media_path))
+        return MediaType.Image
+    except ValueError:
+        return MediaType.Video
+
+
+def set_media_original_date(media_path: Path, date: datetime.datetime):
+    media_type = _get_image_type(media_path)
+
+    MEDIA_TYPE_TO_ORIGINAL_DATE_SETTER[media_type](date, media_path)
 
 
 def get_image_date_mapping(source_dir: Path) -> Mapping[Path, datetime.datetime]:
@@ -102,8 +176,8 @@ def vintagexif(source_dir: Path, destination_dir: Path) -> List[Path]:
         )
         shutil.copy2(file, destination_file)
 
-        set_image_original_date(
-            image_path=destination_file,
+        set_media_original_date(
+            media_path=destination_file,
             date=date + datetime.timedelta(seconds=counter - 1),
         )
 
