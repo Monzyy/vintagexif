@@ -46,3 +46,13 @@ def flat_structured_image_dir() -> Path:
 @pytest.fixture
 def mp4_dir() -> Path:
     return FIXTURE_DIR / "mp4"
+
+
+@pytest.fixture
+def appended_label_dir() -> Path:
+    return FIXTURE_DIR / "appended_label"
+
+
+@pytest.fixture
+def multiple_appended_labels_dir() -> Path:
+    return FIXTURE_DIR / "multiple_appended_labels"

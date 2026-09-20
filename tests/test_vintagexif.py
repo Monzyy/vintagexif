@@ -1,4 +1,5 @@
 import datetime
+from pathlib import Path
 
 import vintagexif
 
@@ -43,3 +44,28 @@ def test_vintagexif_should_set_mp4_original_date(mp4_dir, destination_dir):
     assert vintagexif.get_media_original_date(
         destination_files[0]
     ) == datetime.datetime(year=1997, month=9, day=28)
+
+
+def test_vintagexif_should_preserve_appended_labels(
+    appended_label_dir: Path, destination_dir: Path
+):
+    vintagexif.vintagexif(
+        source_dir=appended_label_dir, destination_dir=destination_dir
+    )
+    actual_file = next(destination_dir.iterdir())
+
+    assert actual_file == destination_dir / "1996-08-27_001_a_label.jpg"
+
+
+def test_vintagexif_should_preserve_multiple_labels(
+    multiple_appended_labels_dir: Path, destination_dir: Path
+):
+    vintagexif.vintagexif(
+        source_dir=multiple_appended_labels_dir, destination_dir=destination_dir
+    )
+    actual_files = set(destination_dir.iterdir())
+
+    assert actual_files == {
+        destination_dir / "1996-08-27_002_a_label.jpg",
+        destination_dir / "1996-08-27_001_another_label.jpg",
+    }

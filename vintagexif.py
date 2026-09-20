@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 import shutil
 from enum import Enum
 from pathlib import Path
@@ -106,7 +107,8 @@ def get_image_date_mapping(source_dir: Path) -> Mapping[Path, datetime.datetime]
     for root, dirs, files in os.walk(source_dir):
         root = Path(root)
         year, month, day = None, 1, 1
-        if not len(files):
+        dir_has_files = len(files)
+        if not dir_has_files:
             continue
 
         for file in files:
@@ -144,11 +146,25 @@ def try_parse_int(date: str) -> Optional[int]:
     return value
 
 
-def try_parse_date(date: str) -> Optional[datetime.datetime]:
-    try:
-        return parse(date)
-    except ValueError:
+def try_parse_date(filename: str) -> Optional[datetime.datetime]:
+    match = re.match(
+        r"^(\d{1,4})([-_])(\d{1,2})\2(\d{1,2})(?=[^\d]|$)",
+        filename,
+    )
+    if not match:
         return None
+
+    year, _, month, day = match.groups()
+    return datetime.datetime(int(year), int(month), int(day))
+
+
+def destination_file_name_format(
+    source_file: Path, date: datetime.datetime, counter: int
+) -> str:
+    match = re.fullmatch(r"\d{4}-\d{2}-\d{2}(.*)", source_file.stem)
+    label = match.group(1) if match else ""
+
+    return f"{date.strftime('%Y-%m-%d')}_{counter:03}{label}{source_file.suffix}"
 
 
 def vintagexif(source_dir: Path, destination_dir: Path) -> List[Path]:
@@ -171,8 +187,8 @@ def vintagexif(source_dir: Path, destination_dir: Path) -> List[Path]:
             counter = 1
         else:
             counter += 1
-        destination_file = (
-            destination_dir / f"{date.strftime('%Y-%m-%d')}_{counter:03}{file.suffix}"
+        destination_file = destination_dir / destination_file_name_format(
+            source_file=file, date=date, counter=counter
         )
         shutil.copy2(file, destination_file)
 
@@ -191,8 +207,8 @@ if __name__ == "__main__":
 
     def _m():
         vintagexif(
-            Path("D:\\Nextcloud\\Familie-mappen\\Hjemmevideoer\\Hjemmevideoer analog"),
-            Path("D:\\vintage_exif_video"),
+            source_dir=Path("G:\\Sara Hjemmevideor"),
+            destination_dir=Path("G:\\vintagexif"),
         )
 
     _m()
