@@ -1,6 +1,1 @@
-python-dateutil
-pytest
-pre-commit
-piexif
-pillow
-pyexiftool
+-e .[dev]

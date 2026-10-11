@@ -3,9 +3,47 @@
 Copy photos and videos into a destination folder, using dates inferred from
 filenames or year/month/day folders to set their recording dates.
 
-Install the Python dependencies with `pip install -r requirements.txt` and
-install the [ExifTool executable](https://exiftool.org/) on your PATH.
-PyExifTool is a Python wrapper and does not include that executable.
+## Installation
+
+Use Python 3.9 or newer. From this repository, install the command:
+
+```sh
+python -m pip install .
+```
+
+For videos, also install the [ExifTool executable](https://exiftool.org/) on your
+PATH. PyExifTool is a Python wrapper and does not include that executable.
+
+## Command line
+
+```sh
+vintagexif "path/to/source media" "path/to/dated output"
+vintagexif --help
+```
+
+You can also run it directly from the repository:
+
+```sh
+python -m vintagexif "path/to/source media" "path/to/dated output"
+```
+
+The source is searched recursively. The destination must be new or empty and
+outside the source directory; missing parent directories are created. Originals
+remain in the source folder. The CLI refuses nonempty destinations to avoid
+overwriting a previous run.
+
+Dates come from a `YYYY-MM-DD` or `YYYY_MM_DD` filename prefix, or numeric
+`year/month/day` directories. A year alone defaults to January 1, and a year/month
+defaults to the first day. Directory dates take precedence over filename dates.
+Files with no inferred date are skipped. Output files are named like
+`1997-09-28_001.mp4`, retaining labels appended to `YYYY-MM-DD` filenames.
+
+The command prints how many files it processed, or reports that no dated files
+were found. Exit codes are `0` for success, `1` for processing errors, `2` for
+invalid command-line arguments, and `130` for interruption. On failure, files
+already processed remain in the destination; use a new output directory to retry.
+
+## Python API
 
 ```python
 from pathlib import Path
@@ -49,5 +87,6 @@ The media fixtures use Git LFS. Download them before running the tests:
 
 ```sh
 git lfs pull
+python -m pip install -r requirements.txt
 python -m pytest
 ```
