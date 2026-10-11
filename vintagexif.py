@@ -1,10 +1,11 @@
+import argparse
 import datetime
 import os
 import re
 import shutil
 from enum import Enum
 from pathlib import Path
-from typing import Mapping, Optional, List, Callable, Dict
+from typing import Mapping, Optional, List, Callable, Dict, Sequence
 
 import exiftool
 import piexif
@@ -29,6 +30,9 @@ VIDEO_WRITABLE_DATE_TAGS = VIDEO_RECORDING_DATE_TAGS + (
 # PyExifTool's default -n bypasses input timezone conversion for QuickTime dates.
 EXIFTOOL_DATE_WRITE_ARGS = ["-G"]
 EXIFTOOL_DATE_WRITE_PARAMS = ["-api", "QuickTimeUTC=1", "-P", "-overwrite_original"]
+CLI_PROGRAM_NAME = "vintagexif"
+CLI_FAILURE_EXIT_CODE = 1
+CLI_INTERRUPTED_EXIT_CODE = 130
 
 
 class MediaType(Enum):
@@ -115,6 +119,7 @@ MEDIA_TYPE_TO_ORIGINAL_DATE_GETTER: Dict[
 
 
 def get_media_original_date(media_path: Path) -> Optional[datetime.datetime]:
+    """Keep date reads aligned with the metadata fields used by Memories."""
     media_type = _get_image_type(Path(media_path))
 
     return MEDIA_TYPE_TO_ORIGINAL_DATE_GETTER[media_type](media_path)
@@ -129,6 +134,7 @@ def _get_image_type(media_path: Path) -> MediaType:
 
 
 def set_media_original_date(media_path: Path, date: datetime.datetime) -> None:
+    """Keep QuickTime text and binary timestamps consistent across timezones."""
     media_type = _get_image_type(media_path)
 
     MEDIA_TYPE_TO_ORIGINAL_DATE_SETTER[media_type](date, media_path)
@@ -204,7 +210,7 @@ def vintagexif(source_dir: Path, destination_dir: Path) -> List[Path]:
     if not source_dir.is_dir():
         raise ValueError("source_dir is not a directory")
     if not destination_dir.exists():
-        destination_dir.mkdir(exist_ok=True)
+        destination_dir.mkdir(parents=True, exist_ok=True)
     if not destination_dir.is_dir():
         raise ValueError("destination_dir is not a directory")
 
@@ -236,12 +242,66 @@ def vintagexif(source_dir: Path, destination_dir: Path) -> List[Path]:
     return destination_files
 
 
-if __name__ == "__main__":
+def _build_argument_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog=CLI_PROGRAM_NAME,
+        description=(
+            "Copy photos and videos into dated files, setting recording dates "
+            "from filenames or year/month/day folders."
+        ),
+        epilog=(
+            "Video dates without a timezone use UTC. ExifTool must be on PATH "
+            "to process videos. Files without an inferred date are skipped."
+        ),
+    )
+    parser.add_argument(
+        "source",
+        metavar="SOURCE",
+        type=Path,
+        help="source directory to search recursively",
+    )
+    parser.add_argument(
+        "destination",
+        metavar="DESTINATION",
+        type=Path,
+        help="new or empty output directory outside SOURCE (created if needed)",
+    )
+    return parser
 
-    def _m():
-        vintagexif(
-            source_dir=Path("G:\\Sara Hjemmevideor"),
-            destination_dir=Path("G:\\vintagexif"),
+
+def _validate_cli_destination(source: Path, destination: Path) -> None:
+    if destination == source or source in destination.parents:
+        raise ValueError("destination must be outside the source directory")
+    if destination.is_dir() and any(destination.iterdir()):
+        raise ValueError(
+            "destination directory must be empty; choose a new directory "
+            "to avoid overwriting existing files"
         )
 
-    _m()
+
+def main(argv: Optional[Sequence[str]] = None) -> None:
+    parser = _build_argument_parser()
+    arguments = parser.parse_args(argv)
+    try:
+        source = arguments.source.expanduser().resolve()
+        destination = arguments.destination.expanduser().resolve()
+        _validate_cli_destination(source, destination)
+        destination_files = vintagexif(source, destination)
+    except exiftool.exceptions.ExifToolExecuteError as error:
+        parser.exit(
+            CLI_FAILURE_EXIT_CODE,
+            f"{parser.prog}: error: {error.stderr.strip()}\n",
+        )
+    except (OSError, ValueError, piexif.InvalidImageDataError) as error:
+        parser.exit(CLI_FAILURE_EXIT_CODE, f"{parser.prog}: error: {error}\n")
+    except KeyboardInterrupt:
+        parser.exit(CLI_INTERRUPTED_EXIT_CODE, f"{parser.prog}: interrupted\n")
+
+    if destination_files:
+        print(f"Processed {len(destination_files)} files into {destination}")
+    else:
+        print(f"No dated media files found in {source}")
+
+
+if __name__ == "__main__":
+    main()
