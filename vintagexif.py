@@ -11,6 +11,26 @@ import piexif
 from dateutil.parser import parse
 
 
+EXIF_DATE_FORMAT = "%Y:%m:%d %H:%M:%S"
+EXIF_DATE_WITH_OFFSET_FORMAT = EXIF_DATE_FORMAT + "%z"
+VIDEO_RECORDING_DATE_TAGS = (
+    "QuickTime:ContentCreateDate",
+    "QuickTime:CreationDate",
+    "QuickTime:CreateDate",
+)
+VIDEO_WRITABLE_DATE_TAGS = VIDEO_RECORDING_DATE_TAGS + (
+    "File:FileModifyDate",
+    "QuickTime:ModifyDate",
+    "QuickTime:TrackCreateDate",
+    "QuickTime:TrackModifyDate",
+    "QuickTime:MediaCreateDate",
+    "QuickTime:MediaModifyDate",
+)
+# PyExifTool's default -n bypasses input timezone conversion for QuickTime dates.
+EXIFTOOL_DATE_WRITE_ARGS = ["-G"]
+EXIFTOOL_DATE_WRITE_PARAMS = ["-api", "QuickTimeUTC=1", "-P", "-overwrite_original"]
+
+
 class MediaType(Enum):
     Image = "IMAGE"
     Video = "VIDEO"
@@ -26,22 +46,20 @@ def _set_image_original_date(date: datetime.datetime, media_path: Path):
     piexif.insert(exif_bytes, str(media_path))
 
 
-def _set_video_original_date(date: datetime.datetime, video_path: Path):
-    with exiftool.ExifToolHelper() as et:
+def _format_video_timestamp(date: datetime.datetime) -> str:
+    date_with_offset = (
+        date.replace(tzinfo=datetime.timezone.utc) if date.utcoffset() is None else date
+    )
+    return date_with_offset.strftime(EXIF_DATE_WITH_OFFSET_FORMAT)
+
+
+def _set_video_original_date(date: datetime.datetime, video_path: Path) -> None:
+    timestamp = _format_video_timestamp(date)
+    with exiftool.ExifToolHelper(common_args=EXIFTOOL_DATE_WRITE_ARGS) as et:
         et.set_tags(
             files=str(video_path),
-            tags={
-                "File:FileModifyDate": date,
-                "File:FileAccessDate": date,
-                "File:FileCreateDate": date,
-                "QuickTime:CreateDate": date,
-                "QuickTime:ModifyDate": date,
-                "QuickTime:TrackCreateDate": date,
-                "QuickTime:TrackModifyDate": date,
-                "QuickTime:MediaCreateDate": date,
-                "QuickTime:MediaModifyDate": date,
-            },
-            params=["-P", "-overwrite_original"],
+            tags=dict.fromkeys(VIDEO_WRITABLE_DATE_TAGS, timestamp),
+            params=EXIFTOOL_DATE_WRITE_PARAMS,
         )
 
 
@@ -61,20 +79,35 @@ def _get_image_original_date(media_path: Path) -> Optional[datetime.datetime]:
     return datetime.datetime.strptime(date_string.decode("utf8"), "%Y:%m:%d %H:%M:%S")
 
 
+def _parse_video_original_date(metadata: Mapping[str, str]) -> datetime.datetime:
+    for tag_name in VIDEO_RECORDING_DATE_TAGS:
+        if tag_name not in metadata:
+            continue
+        value = metadata[tag_name]
+        try:
+            date, time = value.split(" ", maxsplit=1)
+            iso_date = date.replace(":", "-")
+            return datetime.datetime.fromisoformat(f"{iso_date}T{time}").replace(
+                tzinfo=None
+            )
+        except ValueError as error:
+            raise ValueError(
+                f"Invalid video recording date in {tag_name}: {value!r}"
+            ) from error
+    raise ValueError("Video has no embedded recording date")
+
+
 def _get_video_original_date(media_path: Path) -> datetime.datetime:
     with exiftool.ExifToolHelper() as et:
-        tag_name = "File:FileCreateDate"
-        date_string = et.get_tags(media_path, tag_name)[0][tag_name]
-
-    # Removes tzinfo because this method is only used for tests, where timezone really doesn't matter,
-    # and we don't want to make our tests more verbose to accommodate tzinfo
-    return datetime.datetime.strptime(date_string, "%Y:%m:%d %H:%M:%S%z").replace(
-        tzinfo=None
-    )
+        metadata = et.get_tags(str(media_path), VIDEO_RECORDING_DATE_TAGS)[0]
+    try:
+        return _parse_video_original_date(metadata)
+    except ValueError as error:
+        raise ValueError(f"{media_path}: {error}") from error
 
 
 MEDIA_TYPE_TO_ORIGINAL_DATE_GETTER: Dict[
-    MediaType, Callable[[Path], datetime.datetime]
+    MediaType, Callable[[Path], Optional[datetime.datetime]]
 ] = {
     MediaType.Image: _get_image_original_date,
     MediaType.Video: _get_video_original_date,
@@ -95,7 +128,7 @@ def _get_image_type(media_path: Path) -> MediaType:
         return MediaType.Video
 
 
-def set_media_original_date(media_path: Path, date: datetime.datetime):
+def set_media_original_date(media_path: Path, date: datetime.datetime) -> None:
     media_type = _get_image_type(media_path)
 
     MEDIA_TYPE_TO_ORIGINAL_DATE_SETTER[media_type](date, media_path)
