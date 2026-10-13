@@ -7,7 +7,7 @@ import vintagexif
 def test_should_copy_image_to_destination(
     year_month_day_dir: Path, destination_dir: Path
 ) -> None:
-    expected_file = destination_dir / "1993-03-21_001.jpg"
+    expected_file = destination_dir / "1993-03-21.jpg"
 
     vintagexif.vintagexif(
         source_dir=year_month_day_dir, destination_dir=destination_dir
@@ -58,7 +58,7 @@ def test_should_set_mp4_original_date(mp4_dir: Path, destination_dir: Path) -> N
 def test_should_preserve_appended_labels(
     appended_label_dir: Path, destination_dir: Path
 ) -> None:
-    expected_file = destination_dir / "1996-08-27_001_a_label.jpg"
+    expected_file = destination_dir / "1996-08-27_a_label.jpg"
 
     vintagexif.vintagexif(
         source_dir=appended_label_dir, destination_dir=destination_dir
@@ -72,8 +72,8 @@ def test_should_preserve_multiple_labels(
     multiple_appended_labels_dir: Path, destination_dir: Path
 ) -> None:
     expected_files = {
-        destination_dir / "1996-08-27_002_a_label.jpg",
-        destination_dir / "1996-08-27_001_another_label.jpg",
+        destination_dir / "1996-08-27_001_a_label.jpg",
+        destination_dir / "1996-08-27_002_another_label.jpg",
     }
 
     vintagexif.vintagexif(
@@ -82,3 +82,34 @@ def test_should_preserve_multiple_labels(
 
     actual_files = set(destination_dir.iterdir())
     assert actual_files == expected_files
+
+
+def test_should_replace_existing_sequence_and_preserve_label(
+    numbered_sources_dir: Path, destination_dir: Path
+) -> None:
+    expected_files = {
+        destination_dir / "1996-08-27_001_trip.jpg",
+        destination_dir / "1996-08-27_002.jpg",
+    }
+
+    actual_files = vintagexif.vintagexif(
+        source_dir=numbered_sources_dir, destination_dir=destination_dir
+    )
+
+    assert set(actual_files) == expected_files
+
+
+def test_should_number_single_digit_video_sequences_per_date(
+    short_numbered_videos_dir: Path, destination_dir: Path
+) -> None:
+    expected_files = {
+        destination_dir / "2001-12-05_001.mp4",
+        destination_dir / "2001-12-05_002.mp4",
+        destination_dir / "2001-12-07.mp4",
+    }
+
+    actual_files = vintagexif.vintagexif(
+        source_dir=short_numbered_videos_dir, destination_dir=destination_dir
+    )
+
+    assert set(actual_files) == expected_files
