@@ -35,8 +35,10 @@ overwriting a previous run.
 Dates come from a `YYYY-MM-DD` or `YYYY_MM_DD` filename prefix, or numeric
 `year/month/day` directories. A year alone defaults to January 1, and a year/month
 defaults to the first day. Directory dates take precedence over filename dates.
-Files with no inferred date are skipped. Output files are named like
-`1997-09-28_001.mp4`, retaining labels appended to `YYYY-MM-DD` filenames.
+Files with no inferred date are skipped. A single media file for a date is named
+like `1997-09-28.mp4`; multiple files for the same date receive sequence numbers,
+such as `1997-09-28_001.mp4` and `1997-09-28_002.mp4`. Labels appended to
+`YYYY-MM-DD` filenames are retained.
 
 The command prints how many files it processed, or reports that no dated files
 were found. Exit codes are `0` for success, `1` for processing errors, `2` for

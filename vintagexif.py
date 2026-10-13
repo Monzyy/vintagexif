@@ -198,12 +198,14 @@ def try_parse_date(filename: str) -> Optional[datetime.datetime]:
 
 
 def destination_file_name_format(
-    source_file: Path, date: datetime.datetime, counter: int
+    source_file: Path, date: datetime.datetime, counter: Optional[int]
 ) -> str:
     match = re.fullmatch(r"\d{4}-\d{2}-\d{2}(.*)", source_file.stem)
     label = match.group(1) if match else ""
+    label = re.sub(r"_\d+(?=_|$)", "", label, count=1)
+    sequence = f"_{counter:03}" if counter is not None else ""
 
-    return f"{date.strftime('%Y-%m-%d')}_{counter:03}{label}{source_file.suffix}"
+    return f"{date.strftime('%Y-%m-%d')}{sequence}{label}{source_file.suffix}"
 
 
 def vintagexif(source_dir: Path, destination_dir: Path) -> List[Path]:
@@ -215,17 +217,25 @@ def vintagexif(source_dir: Path, destination_dir: Path) -> List[Path]:
         raise ValueError("destination_dir is not a directory")
 
     image_date_mapping = get_image_date_mapping(source_dir)
+    file_count_by_date: Dict[datetime.datetime, int] = {}
+    for date in image_date_mapping.values():
+        file_count_by_date[date] = file_count_by_date.get(date, 0) + 1
 
     last_date = None
-    counter = 1
+    same_date_counter = 0
 
     destination_files = []
 
-    for file, date in sorted(image_date_mapping.items(), key=lambda p: p[1]):
+    for file, date in sorted(
+        image_date_mapping.items(), key=lambda item: (item[1], item[0])
+    ):
         if last_date != date:
-            counter = 1
+            same_date_counter = 1
         else:
-            counter += 1
+            same_date_counter += 1
+        counter = same_date_counter
+        if file_count_by_date[date] == 1:
+            counter = None
         destination_file = destination_dir / destination_file_name_format(
             source_file=file, date=date, counter=counter
         )
@@ -233,7 +243,7 @@ def vintagexif(source_dir: Path, destination_dir: Path) -> List[Path]:
 
         set_media_original_date(
             media_path=destination_file,
-            date=date + datetime.timedelta(seconds=counter - 1),
+            date=date + datetime.timedelta(seconds=same_date_counter - 1),
         )
 
         last_date = date

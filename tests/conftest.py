@@ -80,3 +80,13 @@ def appended_label_dir() -> Path:
 @pytest.fixture
 def multiple_appended_labels_dir() -> Path:
     return FIXTURE_DIR / "multiple_appended_labels"
+
+
+@pytest.fixture
+def numbered_sources_dir() -> Path:
+    return FIXTURE_DIR / "numbered_sources"
+
+
+@pytest.fixture
+def short_numbered_videos_dir() -> Path:
+    return FIXTURE_DIR / "short_numbered_videos"

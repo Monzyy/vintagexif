@@ -45,7 +45,7 @@ def test_should_copy_and_date_images_from_the_cli(
     year_month_day_dir: Path, destination_dir: Path
 ) -> None:
     expected_date = datetime.datetime(1993, 3, 21)
-    expected_file = destination_dir / f"{expected_date:%Y-%m-%d}_001.jpg"
+    expected_file = destination_dir / f"{expected_date:%Y-%m-%d}.jpg"
 
     result = _run_cli([str(year_month_day_dir), str(destination_dir)])
 
@@ -57,7 +57,7 @@ def test_should_copy_and_date_videos_from_the_cli(
     mp4_dir: Path, destination_dir: Path
 ) -> None:
     expected_date = datetime.datetime(1997, 9, 28)
-    expected_file = destination_dir / f"{expected_date:%Y-%m-%d}_001.mp4"
+    expected_file = destination_dir / f"{expected_date:%Y-%m-%d}.mp4"
 
     result = _run_cli([str(mp4_dir), str(destination_dir)])
 
@@ -123,7 +123,7 @@ def test_should_reject_nonempty_destination_without_overwriting_files(
     year_month_day_dir: Path, destination_dir: Path
 ) -> None:
     destination_dir.mkdir()
-    existing_file = destination_dir / "1993-03-21_001.jpg"
+    existing_file = destination_dir / "1993-03-21.jpg"
     original_bytes = b"existing output"
     existing_file.write_bytes(original_bytes)
 
