@@ -200,12 +200,16 @@ def try_parse_date(filename: str) -> Optional[datetime.datetime]:
 def destination_file_name_format(
     source_file: Path, date: datetime.datetime, counter: Optional[int]
 ) -> str:
-    match = re.fullmatch(r"\d{4}-\d{2}-\d{2}(.*)", source_file.stem)
-    label = match.group(1) if match else ""
+    match = re.fullmatch(
+        r"\d{4}-\d{2}-\d{2}(?P<range_end>_\d{4}-\d{2}-\d{2})?(?P<label>.*)",
+        source_file.stem,
+    )
+    range_end = (match.group("range_end") or "") if match else ""
+    label = match.group("label") if match else ""
     label = re.sub(r"_\d+(?=_|$)", "", label, count=1)
     sequence = f"_{counter:03}" if counter is not None else ""
 
-    return f"{date.strftime('%Y-%m-%d')}{sequence}{label}{source_file.suffix}"
+    return f"{date.strftime('%Y-%m-%d')}{range_end}{sequence}{label}{source_file.suffix}"
 
 
 def vintagexif(source_dir: Path, destination_dir: Path) -> List[Path]:

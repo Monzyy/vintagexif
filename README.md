@@ -40,6 +40,11 @@ like `1997-09-28.mp4`; multiple files for the same date receive sequence numbers
 such as `1997-09-28_001.mp4` and `1997-09-28_002.mp4`. Labels appended to
 `YYYY-MM-DD` filenames are retained.
 
+Date ranges such as `1997-02-03_1997-06-04_00.mp4` use the first date for
+recording metadata. Both dates stay together in the output name, followed by
+the assigned sequence when multiple files share the starting date, for example
+`1997-02-03_1997-06-04_001.mp4`.
+
 The command prints how many files it processed, or reports that no dated files
 were found. Exit codes are `0` for success, `1` for processing errors, `2` for
 invalid command-line arguments, and `130` for interruption. On failure, files

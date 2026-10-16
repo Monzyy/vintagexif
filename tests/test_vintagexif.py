@@ -113,3 +113,31 @@ def test_should_number_single_digit_video_sequences_per_date(
     )
 
     assert set(actual_files) == expected_files
+
+
+def test_should_keep_date_ranges_before_sequence_numbers(
+    date_ranges_dir: Path, destination_dir: Path
+) -> None:
+    expected_files = {
+        destination_dir / "1997-02-03_1997-06-04_001.mp4",
+        destination_dir / "1997-02-03_1997-06-04_002.mp4",
+        destination_dir / "1998-02-03_1998-06-04_trip.jpg",
+    }
+
+    actual_files = vintagexif.vintagexif(
+        source_dir=date_ranges_dir, destination_dir=destination_dir
+    )
+
+    assert set(actual_files) == expected_files
+
+
+def test_should_use_range_start_for_recording_date(
+    date_ranges_dir: Path, destination_dir: Path
+) -> None:
+    expected_date = datetime.datetime(1997, 2, 3)
+
+    actual_files = vintagexif.vintagexif(
+        source_dir=date_ranges_dir, destination_dir=destination_dir
+    )
+
+    assert vintagexif.get_media_original_date(actual_files[0]) == expected_date

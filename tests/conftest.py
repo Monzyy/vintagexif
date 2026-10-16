@@ -90,3 +90,8 @@ def numbered_sources_dir() -> Path:
 @pytest.fixture
 def short_numbered_videos_dir() -> Path:
     return FIXTURE_DIR / "short_numbered_videos"
+
+
+@pytest.fixture(name="date_ranges_dir")
+def get_date_ranges_dir() -> Path:
+    return FIXTURE_DIR / "date_ranges"
